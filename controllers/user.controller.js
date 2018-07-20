@@ -1,68 +1,91 @@
-const { User }          = require('../models');
-const authService       = require('../services/auth.service');
-const { to, ReE, ReS }  = require('../services/util.service');
-
-const create = async function(req, res){
-    res.setHeader('Content-Type', 'application/json');
-    const body = req.body;
-
-    if(!body.unique_key && !body.email && !body.phone){
-        return ReE(res, 'Please enter an email or phone number to register.');
-    } else if(!body.password){
-        return ReE(res, 'Please enter a password to register.');
-    }else{
-        let err, user;
-
-        [err, user] = await to(authService.createUser(body));
-
-        if(err) return ReE(res, err, 422);
-        return ReS(res, {message:'Successfully created new user.', user:user.toWeb(), token:user.getJWT()}, 201);
+const authService = require('../services/auth.service');
+const {to, ReE, ReS} = require('../services/util.service');
+const pe = require('parse-error');
+// const debug = require('debug')('Auth');
+/**
+ *
+ * @param req
+ * @param res
+ * @param next
+ * @return {Promise<Model>}
+ */
+const create = async function (req, res, next) {
+    const {name, email, password} = req.body;
+    const errors = [];
+    if (!name) {
+        errors.push(new Error('Please enter your name'));
     }
-}
+    if (!email) {
+        errors.push(new Error('Please enter your email'));
+    }
+    if (!password) {
+        errors.push(new Error('Please enter your password'));
+    }
+    if (!errors.length) {
+        try {
+            const user = await authService.createUser({name, email, password});
+            return ReS(res, user, 201);
+        } catch (e) {
+            next(e);
+        }
+    } else {
+        return next(errors);
+    }
+
+};
 module.exports.create = create;
 
-const get = async function(req, res){
-    res.setHeader('Content-Type', 'application/json');
+const get = async function (req, res) {
     let user = req.user;
-
-    return ReS(res, {user:user.toWeb()});
-}
+    return ReS(res, {user: user.getClean()});
+};
 module.exports.get = get;
 
-const update = async function(req, res){
-    let err, user, data
-    user = req.user;
-    data = req.body;
-    user.set(data);
-
-    [err, user] = await to(user.save());
-    if(err){
-        if(err.message=='Validation error') err = 'The email address or phone number is already in use';
-        return ReE(res, err);
+const update = async function (req, res, next) {
+    try {
+        await req.user.update(req.body);
+        return ReS(res, {user: req.user.getClean()});
+    } catch (e) {
+        next(e);
     }
-    return ReS(res, {message :'Updated User: '+user.email});
-}
+};
 module.exports.update = update;
 
-const remove = async function(req, res){
-    let user, err;
-    user = req.user;
-
-    [err, user] = await to(user.destroy());
-    if(err) return ReE(res, 'error occured trying to delete user');
-
-    return ReS(res, {message:'Deleted User'}, 204);
-}
+const remove = async function (req, res, next) {
+    const user = req.user, id = user.id;
+    try {
+        await user.destroy();
+        return ReS(res, {id}, 204);
+    } catch (e) {
+        next(e);
+    }
+};
 module.exports.remove = remove;
 
-
-const login = async function(req, res){
+const login = async function (req, res) {
     const body = req.body;
     let err, user;
 
-    [err, user] = await to(authService.authUser(req.body));
-    if(err) return ReE(res, err, 422);
+    [err, user] = await to(authService.authUser(body));
+    if (err) return ReE(res, err, 422);
 
-    return ReS(res, {token:user.getJWT(), user:user.toWeb()});
-}
+    return ReS(res, {token: user.getJWT(), user: user.getClean()});
+};
 module.exports.login = login;
+const google = async function (req, res, next) {
+    try {
+        const user = await authService.authUser(req.body);
+        return ReS(res, {token: user.getJWT(), user: user.getClean()});
+    } catch (e) {
+        const err = pe(e);
+        console.error(err);
+        err.status = 422;
+        next(err);
+    }
+};
+module.exports.google = google;
+
+const me = async function (req, res) {
+    return ReS(res, {user: req.user.getClean()});
+};
+module.exports.me = me;

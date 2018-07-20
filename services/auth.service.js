@@ -1,90 +1,109 @@
-const { User } 	    = require('../models');
-const validator     = require('validator');
-const { to, TE }    = require('../services/util.service');
+const {OAuth2Client} = require('google-auth-library');
+const {User} = require('../models');
+const validator = require('validator');
+const debug = require('debug')('Auth');
 
-const getUniqueKeyFromBody = function(body){// this is so they can send in 3 options unique_key, email, or phone and it will work
-    let unique_key = body.unique_key;
-    if(typeof unique_key==='undefined'){
-        if(typeof body.email != 'undefined'){
-            unique_key = body.email
-        }else if(typeof body.phone != 'undefined'){
-            unique_key = body.phone
-        }else{
-            unique_key = null;
+const CLIENT_ID = '777688038969-dgf86lie7v6pkq4qr3p5rscd1atfu9cg.apps.googleusercontent.com';
+
+/**
+ *
+ * @param name
+ * @param email
+ * @param password
+ * @param oauth_provider
+ * @param oauth_id
+ * @return {Promise<Model>}
+ * @throws {Error}
+ */
+const createUser = async ({name, email, password, oauth_provider, oauth_id}) => {
+    debug('Creating a new user.');
+    // Google Sign In
+    if (oauth_id && oauth_provider && !password) {
+        debug('It is a Google user!');
+        // Should we validate email that comes from the Google API?
+        return await User.create({name, email, oauth_provider, oauth_id});
+        // Local Sign In
+    } else if (!oauth_id && !oauth_provider && name && password) {
+        debug('It is a local user!');
+        // Validate fields
+        if (!validator.isEmail(email)) {
+            debug('Email is not valid');
+            throw new TypeError('Email is not valid');
+        }
+        return await User.create({name, email, password});
+    }
+};
+module.exports.createUser = createUser;
+
+/**
+ *
+ * @param token
+ * @return {Promise<TokenPayload | undefined>}
+ */
+async function checkAccessToken(token) {
+    const client = new OAuth2Client(CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
+        // Or, if multiple clients access the backend:
+        //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
+    });
+    return ticket.getPayload();
+}
+
+/**
+ *
+ * @param email
+ * @param password
+ * @param token
+ * @return {Promise<Model>}
+ * @throws {Error}
+ */
+const authUser = async function ({email, password, token}) {
+    if (token && !email && !password) {
+        const payload = await checkAccessToken(token);
+        if (!!payload) {
+            console.log(payload);
+            let user = await User.findOne({where: {oauth_provider: "Google", oauth_id: payload.sub}});
+            if (user === null) {
+                const userData = {
+                    name: payload.name,
+                    email: payload.email,
+                    oauth_provider: "Google",
+                    oauth_id: payload.sub
+                };
+                user = await createUser(userData);
+            }
+            return user;
+
+        } else {
+            throw new Error('Token is invalid');
+        }
+    } else {
+        if (!password) {
+            throw new Error('Please enter a password to login.');
+        }
+        if (!email) {
+            throw new Error('Please enter an email to login.');
+        }
+        if (!validator.isEmail(email)) {
+            throw new Error('Please enter a valid email.');
+        } else {
+            const user = await User.findOne({where: {email}});
+            if (user === null) {
+                throw new Error('User with this email not found.');
+            }
+            if (user.oauth_provider !== null && user.oauth_id !== null) {
+                throw new Error(`This account is linked to ${user.oauth_provider} account. Maybe You want to login with it?`);
+            }
+            const passwordValid = await user.comparePassword(password);
+            if (!passwordValid) {
+                throw new Error('Password is invalid.');
+            }
+            return user;
         }
     }
 
-    return unique_key;
-}
-module.exports.getUniqueKeyFromBody = getUniqueKeyFromBody;
-
-const createUser = async (userInfo) => {
-    let unique_key, auth_info, err;
-
-    auth_info={};
-    auth_info.status='create';
-
-    unique_key = getUniqueKeyFromBody(userInfo);
-    if(!unique_key) TE('An email or phone number was not entered.');
-
-    if(validator.isEmail(unique_key)){
-        auth_info.method = 'email';
-        userInfo.email = unique_key;
-
-        [err, user] = await to(User.create(userInfo));
-        if(err) TE('user already exists with that email');
-
-        return user;
-
-    }else if(validator.isMobilePhone(unique_key, 'any')){//checks if only phone number was sent
-        auth_info.method = 'phone';
-        userInfo.phone = unique_key;
-
-        [err, user] = await to(User.create(userInfo));
-        if(err) TE('user already exists with that phone number');
-
-        return user;
-    }else{
-        TE('A valid email or phone number was not entered.');
-    }
-}
-module.exports.createUser = createUser;
-
-const authUser = async function(userInfo){//returns token
-    let unique_key;
-    let auth_info = {};
-    auth_info.status = 'login';
-    unique_key = getUniqueKeyFromBody(userInfo);
-
-    if(!unique_key) TE('Please enter an email or phone number to login');
-
-
-    if(!userInfo.password) TE('Please enter a password to login');
-
-    let user;
-    if(validator.isEmail(unique_key)){
-        auth_info.method='email';
-
-        [err, user] = await to(User.findOne({where:{email:unique_key}}));
-        if(err) TE(err.message);
-
-    }else if(validator.isMobilePhone(unique_key, 'any')){//checks if only phone number was sent
-        auth_info.method='phone';
-
-        [err, user] = await to(User.findOne({where:{phone:unique_key }}));
-        if(err) TE(err.message);
-
-    }else{
-        TE('A valid email or phone number was not entered');
-    }
-
-    if(!user) TE('Not registered');
-
-    [err, user] = await to(user.comparePassword(userInfo.password));
-
-    if(err) TE(err.message);
-
-    return user;
-
-}
+};
 module.exports.authUser = authUser;
+

@@ -1,18 +1,18 @@
-const express 		= require('express');
-const logger 	    = require('morgan');
-const bodyParser 	= require('body-parser');
-const passport      = require('passport');
-const pe            = require('parse-error');
-const cors          = require('cors');
+const express = require('express');
+const logger = require('morgan');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const pe = require('parse-error');
+const cors = require('cors');
 
-const v1    = require('./routes/v1');
-const app   = express();
+const v1 = require('./routes/v1');
+const app = express();
 
 const CONFIG = require('./config/config');
 
 app.use(logger('dev'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({extended: false}));
 // app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 
@@ -20,45 +20,57 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
 
 //Log Env
-console.log("Environment:", CONFIG.app)
+console.log("Environment:", CONFIG.app);
 //DATABASE
 const models = require("./models");
 models.sequelize.authenticate().then(() => {
     console.log('Connected to SQL database:', CONFIG.db_name);
 })
-.catch(err => {
-    console.error('Unable to connect to SQL database:',CONFIG.db_name, err);
-});
-if(CONFIG.app==='dev'){
+    .catch(err => {
+        console.error('Unable to connect to SQL database:', CONFIG.db_name, err);
+    });
+if (CONFIG.app === 'dev') {
     models.sequelize.sync();//creates table if they do not already exist
     // models.sequelize.sync({ force: true });//deletes all tables then recreates them useful for testing and development purposes
 }
 // CORS
 app.use(cors());
-
 app.use('/v1', v1);
 
-app.use('/', function(req, res){
-	res.statusCode = 200;//send the appropriate status code
-	res.json({status:"success", message:"Parcel Pending API", data:{}})
+app.get(function (req, res) {
+    res.statusCode = 200;//send the appropriate status code
+    res.json({status: "success", message: "Bookmarks API"})
 });
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+app.use(function (req, res, next) {
+    let err = new Error('Not Found');
+    err.status = 404;
+    next(err);
 });
 
 // error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.use(function (err, req, res) {
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
+    let errors = (err instanceof Array) ? err : [err];
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+
+    if (req.app.get('env') === 'production') {
+        errors = errors.map(e => {
+            const err = pe(e);
+            delete err.stack;
+            delete err.line;
+            delete err.row;
+            delete err.filename;
+            delete err.stack;
+            return err;
+        });
+    }
+    res
+        .status(err.status || 500)
+        .json({success: false, errors});
 });
 
 module.exports = app;

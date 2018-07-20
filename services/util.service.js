@@ -10,7 +10,7 @@ module.exports.to = async (promise) => {
 };
 
 module.exports.ReE = function(res, err, code){ // Error Web Response
-    if(typeof err == 'object' && typeof err.message != 'undefined'){
+    if (typeof err === 'object' && typeof err.message !== 'undefined') {
         err = err.message;
     }
 
@@ -22,7 +22,7 @@ module.exports.ReE = function(res, err, code){ // Error Web Response
 module.exports.ReS = function(res, data, code){ // Success Web Response
     let send_data = {success:true};
 
-    if(typeof data == 'object'){
+    if (typeof data === 'object') {
         send_data = Object.assign(data, send_data);//merge the objects
     }
 
@@ -37,6 +37,12 @@ module.exports.TE = TE = function(err_message, log){ // TE stands for Throw Erro
     }
 
     throw new Error(err_message);
+};
+module.exports.handleError = function (error, next) {
+    const err = pe(error);
+    console.error(error);
+    err.status = 422;
+    next(err);
 };
 
 
