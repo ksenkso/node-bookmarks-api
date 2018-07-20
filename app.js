@@ -50,25 +50,23 @@ app.use(function (req, res, next) {
 });
 
 // error handler
-app.use(function (err, req, res) {
+// Don't remove the `next` argument - it's necessary for Express that this function has 4 arguments
+app.use(function (err, req, res, next) {
     // set locals, only providing error in development
     res.locals.message = err.message;
     res.locals.error = req.app.get('env') === 'development' ? err : {};
     let errors = (err instanceof Array) ? err : [err];
-
+    errors = errors.map(e => {
+        const err = pe(e);
+        delete err.line;
+        delete err.row;
+        delete err.filename;
+        delete err.stack;
+        return err;
+    });
 
     if (req.app.get('env') === 'production') {
-        errors = errors.map(e => {
-            const err = pe(e);
-            delete err.stack;
-            delete err.line;
-            delete err.row;
-            delete err.filename;
-            delete err.stack;
-            return err;
-        });
-    } else {
-        errors = errors.map(pe);
+
     }
     res
         .status(err.status || 500)

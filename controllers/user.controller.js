@@ -1,5 +1,5 @@
 const authService = require('../services/auth.service');
-const {to, ReE, ReS} = require('../services/util.service');
+const {ReS, handleError} = require('../services/util.service');
 const pe = require('parse-error');
 // const debug = require('debug')('Auth');
 /**
@@ -62,28 +62,18 @@ const remove = async function (req, res, next) {
 };
 module.exports.remove = remove;
 
-const login = async function (req, res) {
-    const body = req.body;
-    let err, user;
 
-    [err, user] = await to(authService.authUser(body));
-    if (err) return ReE(res, err, 422);
-
-    return ReS(res, {token: user.getJWT(), user: user.getClean()});
-};
-module.exports.login = login;
-const google = async function (req, res, next) {
+const login = async function (req, res, next) {
     try {
         const user = await authService.authUser(req.body);
         return ReS(res, {token: user.getJWT(), user: user.getClean()});
     } catch (e) {
         const err = pe(e);
-        console.error(err);
         err.status = 422;
-        next(err);
+        handleError(e, next);
     }
 };
-module.exports.google = google;
+module.exports.login = login;
 
 const me = async function (req, res) {
     return ReS(res, {user: req.user.getClean()});

@@ -41,7 +41,7 @@ module.exports.TE = TE = function(err_message, log){ // TE stands for Throw Erro
 module.exports.handleError = function (error, next) {
     const err = pe(error);
     console.error(error);
-    err.status = 422;
+    err.status = error.status || 500;
     next(err);
 };
 

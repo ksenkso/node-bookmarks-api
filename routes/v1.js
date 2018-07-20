@@ -15,12 +15,11 @@ router.get('/', function (req, res) {
 });
 
 router.post(    '/users',           UserController.create);                                                    // C
-router.get('/users/me', passport.authenticate('jwt', {session: false}), UserController.get);        // R
+router.get('/users/me', passport.authenticate('jwt', {session: false}), UserController.get);                   // R
 router.put(     '/users',           passport.authenticate('jwt', {session:false}), UserController.update);     // U
 router.delete(  '/users',           passport.authenticate('jwt', {session:false}), UserController.remove);     // D
 router.get('/users/me', passport.authenticate('jwt', {session: false}), UserController.me);
-router.post('/users/login', UserController.google);
-router.post('/users/google', UserController.google);
+router.post('/users/login', UserController.login);
 
 router.post('/bookmarks', passport.authenticate('jwt', {session: false}), BookmarkController.create);                  // C
 router.get('/bookmarks', passport.authenticate('jwt', {session: false}), BookmarkController.getAll);                  // R
