@@ -67,6 +67,8 @@ app.use(function (err, req, res) {
             delete err.stack;
             return err;
         });
+    } else {
+        errors = errors.map(pe);
     }
     res
         .status(err.status || 500)
