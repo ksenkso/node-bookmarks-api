@@ -3,6 +3,7 @@ const router 			= express.Router();
 
 const UserController 	= require('../controllers/user.controller');
 const BookmarkController = require('../controllers/bookmark.controller');
+const FolderController = require('../controllers/folder.controller');
 
 const passport      	= require('passport');
 const path              = require('path');
@@ -24,11 +25,13 @@ router.post('/users/login', UserController.login);
 router.post('/bookmarks', passport.authenticate('jwt', {session: false}), BookmarkController.create);                  // C
 router.get('/bookmarks', passport.authenticate('jwt', {session: false}), BookmarkController.getAll);                  // R
 
+
 router.get('/bookmarks/:id', passport.authenticate('jwt', {session: false}), BookmarkController.get);     // R
 router.put('/bookmarks/:id', passport.authenticate('jwt', {session: false}), BookmarkController.update);  // U
 router.delete('/bookmarks/:id', passport.authenticate('jwt', {session: false}), BookmarkController.remove);  // D
 
-
+router.get('/folders/root', passport.authenticate('jwt', {session: false}), FolderController.root);                  // R
+router.get('/folders/:folderId', passport.authenticate('jwt', {session: false}), FolderController.getFolder); // R
 
 //********* API DOCUMENTATION **********
 router.use('/docs/api.json',            express.static(path.join(__dirname, '/../public/v1/documentation/api.json')));

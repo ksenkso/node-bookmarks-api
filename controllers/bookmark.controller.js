@@ -2,6 +2,7 @@ const handleError = require("../services/util.service").handleError;
 
 const {Bookmark} = require('../models');
 const {ReS} = require('../services/util.service');
+
 /**
  *
  * @param req
