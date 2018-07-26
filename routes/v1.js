@@ -1,6 +1,7 @@
 const express 			= require('express');
 const router 			= express.Router();
 
+const {Folder} = require('../models');
 const UserController 	= require('../controllers/user.controller');
 const BookmarkController = require('../controllers/bookmark.controller');
 const FolderController = require('../controllers/folder.controller');
@@ -8,6 +9,15 @@ const FolderController = require('../controllers/folder.controller');
 const passport      	= require('passport');
 const path              = require('path');
 
+const checkAccess = require('./../middleware/checkAccess');
+
+const checkFolderPermissions = checkAccess({
+    modelClass: Folder,
+    hasPermission({user, model}) {
+        return model.UserId === user.id;
+    },
+    errorMessage: 'You can access only your own folders and bookmarks.'
+});
 
 require('./../middleware/passport')(passport);
 /* GET home page. */
@@ -31,7 +41,10 @@ router.put('/bookmarks/:id', passport.authenticate('jwt', {session: false}), Boo
 router.delete('/bookmarks/:id', passport.authenticate('jwt', {session: false}), BookmarkController.remove);  // D
 
 router.get('/folders/root', passport.authenticate('jwt', {session: false}), FolderController.root);                  // R
-router.get('/folders/:folderId', passport.authenticate('jwt', {session: false}), FolderController.getFolder); // R
+router.get('/folders/:id', passport.authenticate('jwt', {session: false}), checkFolderPermissions, FolderController.getFolder); // R
+router.put('/folders/:id', passport.authenticate('jwt', {session: false}), checkFolderPermissions, FolderController.update); // R
+router.delete('/folders/:id', passport.authenticate('jwt', {session: false}), checkFolderPermissions, FolderController.deleteFolder); // R
+router.post('/folders', passport.authenticate('jwt', {session: false}), FolderController.create); // R
 
 //********* API DOCUMENTATION **********
 router.use('/docs/api.json',            express.static(path.join(__dirname, '/../public/v1/documentation/api.json')));

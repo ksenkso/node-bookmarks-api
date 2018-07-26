@@ -1,5 +1,5 @@
-// TODO: Create a middleware to protect foreign user's data from changing
 const ReS = require("../services/util.service").ReS;
+const debug = require('debug');
 const lFolders = debug('Folders');
 const lBookmarks = debug('Bookmarks');
 const handleError = require("../services/util.service").handleError;
@@ -34,25 +34,9 @@ const root = async function (req, res, next) {
 module.exports.root = root;
 
 const getFolder = async function (req, res, next) {
-    const user = req.user;
-    const folderId = req.params.folderId;
     try {
-        const folder = await Folder.findById(folderId);
-        if (folder) {
-            if (folder.UserId === user.id) {
-                const items = await extractFoldersContent(/** @type Folder */folder);
-                return ReS(res, {items});
-            } else {
-                const error = new Error('You can access only your own folders and bookmarks.');
-                error.status = 403;
-                handleError(error, next);
-            }
-        } else {
-            const error = new Error('No such folder');
-            error.status = 404;
-            handleError(error, next);
-        }
-
+        const items = await extractFoldersContent(/** @type Folder */req.grantedModel);
+        return ReS(res, {items});
     } catch (e) {
         handleError(e, next);
     }
@@ -71,9 +55,8 @@ const create = async function (req, res, next) {
 module.exports.create = create;
 
 const update = async function (req, res, next) {
-    const id = req.params.id;
     try {
-        const folder = await Folder.findById(id);
+        const folder = req.grantedModel;
         await folder.update(req.body);
         return ReS(res, folder);
     } catch (e) {
@@ -84,7 +67,7 @@ module.exports.update = update;
 const deleteFolder = async function (req, res, next) {
     const id = req.params.id;
     try {
-        const folder = await Folder.findById(id);
+        const folder = req.grantedModel;
         await folder.destroy();
         return ReS(res, {id});
     } catch (e) {
