@@ -1,3 +1,9 @@
+/**
+ * @typedef {{
+ *  type: String,
+ *  data: Folder|Bookmark
+ * }} FolderItem
+ */
 const ReS = require("../services/util.service").ReS;
 const debug = require('debug');
 const lFolders = debug('Folders');
@@ -8,7 +14,7 @@ const {Folder} = require('../models');
 /**
  *
  * @param {Folder} folder
- * @return {Promise<Array>}
+ * @return {Promise<Array<FolderItem>>}
  */
 async function extractFoldersContent(folder) {
     const folders = await folder.getChildFolders();
@@ -35,7 +41,7 @@ module.exports.root = root;
 
 const getFolder = async function (req, res, next) {
     try {
-        const items = await extractFoldersContent(/** @type Folder */req.grantedModel);
+        const items = await extractFoldersContent(/** @type Folder */req.folder);
         return ReS(res, {items});
     } catch (e) {
         handleError(e, next);
@@ -56,7 +62,7 @@ module.exports.create = create;
 
 const update = async function (req, res, next) {
     try {
-        const folder = req.grantedModel;
+        const folder = req.folder;
         await folder.update(req.body);
         return ReS(res, folder);
     } catch (e) {
@@ -67,7 +73,7 @@ module.exports.update = update;
 const deleteFolder = async function (req, res, next) {
     const id = req.params.id;
     try {
-        const folder = req.grantedModel;
+        const folder = req.folder;
         await folder.destroy();
         return ReS(res, {id});
     } catch (e) {

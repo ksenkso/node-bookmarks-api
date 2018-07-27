@@ -1,6 +1,6 @@
 const handleError = require("../services/util.service").handleError;
 
-const {Bookmark} = require('../models');
+const {Bookmark, Folder} = require('../models');
 const {ReS} = require('../services/util.service');
 
 /**
@@ -11,6 +11,10 @@ const {ReS} = require('../services/util.service');
  * @return {Promise<Model>}
  */
 const create = async function (req, res, next) {
+    /**
+     *
+     * @type {User}
+     */
     let user = req.user;
     let bookmarkData = req.body;
     try {
@@ -39,46 +43,60 @@ const getAll = async function (req, res, next) {
 module.exports.getAll = getAll;
 
 const get = async function (req, res, next) {
-    const id = req.params.id;
     try {
-        const bookmark = await Bookmark.findById(id);
-        if (!bookmark) {
-            const error = new Error('Bookmark with this id not found.');
-            handleError(error, next);
-        } else {
-            return ReS(res, bookmark.toJSON());
-        }
+        const bookmark = req.bookmark;
+        return ReS(res, bookmark.toJSON());
     } catch (e) {
         handleError(e, next);
     }
 };
 module.exports.get = get;
 
-const update = async function (req, res) {
-    const id = req.params.id;
+const update = async function (req, res, next) {
     try {
-        const bookmark = await Bookmark.findById(id);
-        await bookmark.update(req.body);
-        return ReS(res, bookmark.toJSON());
+        const bookmark = req.bookmark;
+        const {FolderId} = req.body;
+        // Check if FolderId was updated
+        if (FolderId && FolderId !== bookmark.FolderId) {
+            // If it was, find that folder
+            const folder = await Folder.findById(FolderId);
+            if (!folder) {
+                // If there is no such folder, send error
+                const error = new Error('Specified folder does not exist.');
+                error.status = 422;
+                handleError(error, next);
+            } else {
+                if (folder.UserId !== req.user.id) {
+                    //If it is not user's folder, send error
+                    const error = new Error('You can move items only to your own folders.');
+                    error.status = 403;
+                    handleError(error, next);
+                } else {
+                    // Update bookmark
+                    await bookmark.update(req.body);
+                    return ReS(res, bookmark.toJSON());
+                }
+            }
+        } else {
+            //If FolderId wasn't updated, update the bookmark
+            await bookmark.update(req.body);
+            return ReS(res, bookmark.toJSON());
+        }
     } catch (e) {
         handleError(e, next);
     }
 };
 module.exports.update = update;
 
-const remove = async function (req, res) {
+const remove = async function (req, res, next) {
     const id = req.params.id;
     try {
-        const bookmark = await Bookmark.findById(id);
-        if (!bookmark) {
-            const error = new Error('Bookmark with this id not found.');
-            handleError(error, next);
-        } else {
-            await bookmark.destroy();
-            return ReS(res, {id}, 204);
-        }
+        const bookmark = req.bookmark;
+        await bookmark.destroy();
+        return ReS(res, {id});
     } catch (e) {
         handleError(e, next);
     }
 };
 module.exports.remove = remove;
+

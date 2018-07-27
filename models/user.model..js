@@ -1,3 +1,8 @@
+/**
+ * @function
+ * @name User#addBookmark
+ * @param {Bookmark} bookmark
+ */
 'use strict';
 const debug = require('debug')('Model:User');
 const bcrypt = require('bcrypt');
