@@ -63,6 +63,8 @@ module.exports.create = create;
 const update = async function (req, res, next) {
     try {
         const folder = req.folder;
+        // Prevent owner change
+        delete req.body.UserId;
         await folder.update(req.body);
         return ReS(res, folder);
     } catch (e) {

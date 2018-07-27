@@ -29,6 +29,7 @@ module.exports = (sequelize, DataTypes) => {
 
     User.associate = function (models) {
         User.hasMany(models.Bookmark);
+        User.hasMany(models.Tag);
     };
 
     User.beforeSave(async (user) => {

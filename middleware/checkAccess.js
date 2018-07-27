@@ -15,29 +15,32 @@ const handleError = require("../services/util.service").handleError;
  * @return {Function}
  */
 module.exports = function (config) {
-    const {
-        modelClass,
-        id = 'id',
-        hasPermission,
-        errorMessage = 'You cannot access this resource.',
-        notFoundMessage = 'Not found',
-        modelName = 'grantedModel'
-    } = config;
-    return async function (req, res, next) {
-        const key = req.params[id];
+    config = Object.assign(
+        {},
+        {
+            modelName: 'grantedModel',
+            id: 'id',
+            errorMessage: 'You cannot access this resource.',
+            notFoundMessage: 'Not found.'
+        },
+        config
+    );
+    const func = async function (req, res, next) {
+        this.config = config;
+        const key = req.params[this.config.id];
         const user = req.user;
         try {
-            const model = await modelClass.findById(key);
+            const model = await this.config.modelClass.findById(key);
             if (!model) {
-                const error = new Error(notFoundMessage);
+                const error = new Error(this.config.notFoundMessage);
                 error.status = 404;
                 return handleError(error, next);
             }
-            if (hasPermission({user, model})) {
-                req[modelName] = model;
+            if (this.config.hasPermission({user, model})) {
+                req[this.config.modelName] = model;
                 next();
             } else {
-                const error = new Error(errorMessage);
+                const error = new Error(this.config.errorMessage);
                 error.status = 403;
                 handleError(error, next);
             }
@@ -45,4 +48,16 @@ module.exports = function (config) {
             handleError(e, next);
         }
     };
+
+    /**
+     * Override previous configuration
+     * @param {Object} newConfig
+     * @return {*}
+     */
+    func.override = (newConfig) => {
+        func.config = Object.assign({}, config, newConfig);
+        return func;
+    };
+
+    return func;
 };
