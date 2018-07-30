@@ -1,5 +1,10 @@
 /**
  * @function
+ * @name User#getRootFolder
+ * @return {Promise<Folder>}
+ */
+/**
+ * @function
  * @name User#addBookmark
  * @param {Bookmark} bookmark
  */
@@ -8,6 +13,8 @@ const debug = require('debug')('Model:User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const CONFIG = require('../config/config');
+const {Folder} = require('../models');
+
 
 module.exports = (sequelize, DataTypes) => {
     /**
@@ -71,6 +78,16 @@ module.exports = (sequelize, DataTypes) => {
         let json = this.toJSON();
         delete json['password'];
         return json;
+    };
+
+    User.prototype.getRootFolder = function () {
+        return Folder.findOne({where: {UserId: this.id, ParentId: null}});
+    };
+    User.prototype.hasFolderWithId = function (id) {
+        return sequelize.query(
+            'SELECT EXISTS(SELECT 1 FROM Folders WHERE id = ? AND UserId = ?)',
+            {replacements: [id, this.id]}
+        );
     };
 
 
