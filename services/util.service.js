@@ -206,8 +206,7 @@ function saveImage({buffer, userId, type}) {
             createBackground
         ]);
         // Generate image name
-        const imageName = userId + '_' + randomString.generate({length: 64}) + imageSettings[type].extension;
-        const path = `uploads/${imageName}`;
+        const path = `uploads/${userId + '_' + randomString.generate({length: 64}) + imageSettings[type].extension}`;
 
         fs.writeFile(path, transformedImageBuffer, (error) => {
             if (error) {
@@ -215,7 +214,7 @@ function saveImage({buffer, userId, type}) {
                 reject(error);
             } else {
                 resolve({
-                    image: imageName,
+                    image: path,
                     background,
                     type
                 });
