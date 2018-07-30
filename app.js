@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const passport = require('passport');
 const pe = require('parse-error');
 const cors = require('cors');
+const path = require('path');
 
 const v1 = require('./routes/v1');
 const app = express();
@@ -15,6 +16,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 // app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 //Passport
 app.use(passport.initialize());
