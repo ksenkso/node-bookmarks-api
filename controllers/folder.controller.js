@@ -9,7 +9,8 @@ const debug = require('debug');
 const lFolders = debug('Folders');
 const lBookmarks = debug('Bookmarks');
 const handleError = require("../services/util.service").handleError;
-const {Folder} = require('../models');
+const {Folder, sequelize} = require('../models');
+
 
 /**
  *
@@ -50,9 +51,24 @@ const getFolder = async function (req, res, next) {
 module.exports.getFolder = getFolder;
 
 const create = async function (req, res, next) {
-    const {name, ParentId} = req.body;
+    let {name, ParentId} = req.body;
+    const UserId = req.user.id;
+    if (!ParentId) {
+        ParentId = await Folder.findOne({where: {ParentId: null, UserId}}).id;
+    } else {
+        // Check if the parent folder belongs to the user
+        const belongs = await sequelize.query(
+            'SELECT EXISTS(SELECT 1 FROM :table WHERE UserId = :id)',
+            {replacements: ['Folders', UserId]}
+        );
+        if (!belongs) {
+            const error = new Error('You do not have access to this folder.');
+            error.status = 403;
+            return handleError(error, next);
+        }
+    }
     try {
-        const newFolder = await Folder.create({name, ParentId});
+        const newFolder = await Folder.create({name, ParentId, UserId});
         return ReS(res, newFolder.toJSON(), 201);
     } catch (e) {
         handleError(e, next);
