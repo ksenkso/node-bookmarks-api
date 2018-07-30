@@ -56,10 +56,10 @@ const create = async function (req, res, next) {
         bookmarkData.imageType = imageInfo.type;
         bookmarkData.background = imageInfo.background;
         newBookmark = await Bookmark.create(bookmarkData);
-        user.addBookmark(newBookmark);
-        // let bookmarkJson = await bookmark.toJSON();
-        let bookmark = await newBookmark.toJSON();
-
+        const [bookmark] = await Promise.all([
+            newBookmark.toJSON(),
+            user.addBookmark(newBookmark)
+        ]);
         return ReS(res, {bookmark}, 201);
     } catch (e) {
         handleError(e, next);
