@@ -1,8 +1,30 @@
-const handleError = require("../services/util.service").handleError;
+// TODO: Refactor `create` route to use image load function
+const {handleError, loadImageForUser} = require("../services/util.service");
 
 const {Bookmark, Folder, Tag} = require('../models');
 const {ReS} = require('../services/util.service');
 
+const testLoad = async function (req, res, next) {
+    const url = req.body.url;
+    const id = req.user.id;
+    let image;
+    try {
+        image = await loadImageForUser(url, id);
+        return ReS(res, image);
+    } catch (e) {
+        if (e.status && e.status === 404) {
+            image = {
+                image: 'default.jpg',
+                background: null,
+                type: 'IMG'
+            };
+            return ReS(res, image);
+        } else {
+            handleError(e, next);
+        }
+    }
+};
+module.exports.testLoad = testLoad;
 /**
  *
  * @param req
@@ -17,13 +39,28 @@ const create = async function (req, res, next) {
      */
     let user = req.user;
     let bookmarkData = req.body;
+    // Prevent UserId change
+    delete bookmarkData.UserId;
+    let newBookmark, imageInfo;
     try {
-        const bookmark = await Bookmark.create(bookmarkData);
-        user.addBookmark(bookmark);
+        imageInfo = await loadImageForUser(bookmarkData.url, user.id);
+    } catch (e) {
+        imageInfo = {
+            image: 'default.jpg',
+            background: null,
+            type: 'IMG'
+        };
+    }
+    try {
+        bookmarkData.img = imageInfo.image;
+        bookmarkData.imageType = imageInfo.type;
+        bookmarkData.background = imageInfo.background;
+        newBookmark = await Bookmark.create(bookmarkData);
+        user.addBookmark(newBookmark);
         // let bookmarkJson = await bookmark.toJSON();
-        let bookmarkJson = await bookmark.toJSON();
-        bookmarkJson.userId = user.id;
-        return ReS(res, {bookmark: bookmarkJson}, 201);
+        let bookmark = await newBookmark.toJSON();
+
+        return ReS(res, {bookmark}, 201);
     } catch (e) {
         handleError(e, next);
     }
@@ -129,3 +166,5 @@ const byTag = async function (req, res, next) {
     }
 };
 module.exports.byTag = byTag;
+
+

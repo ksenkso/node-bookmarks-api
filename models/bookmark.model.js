@@ -22,7 +22,9 @@ module.exports = (sequelize, DataTypes) => {
     const Model = sequelize.define('Bookmark', {
         title: DataTypes.STRING,
         url: DataTypes.STRING,
-        img: DataTypes.STRING
+        img: DataTypes.STRING,
+        background: DataTypes.STRING,
+        imageType: DataTypes.STRING
     });
 
     Model.associate = function (models) {

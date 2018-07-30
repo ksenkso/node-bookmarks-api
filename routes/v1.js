@@ -64,7 +64,8 @@ router.put(
     checkBookmarkPermissions,
     checkTagPermissions.override({id: 'tagId'}),
     BookmarkController.addTag
-);                                                                                                                                      // U
+);                                                                                                                           // U
+router.post('/bookmarks/load', passport.authenticate('jwt', {session: false}), BookmarkController.testLoad);
 
 
 router.get('/folders/root', passport.authenticate('jwt', {session: false}), FolderController.root);                                     // R
