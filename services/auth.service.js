@@ -1,5 +1,5 @@
 const {OAuth2Client} = require('google-auth-library');
-const {User} = require('../models');
+const {User, Folder} = require('../models');
 const validator = require('validator');
 const debug = require('debug')('Auth');
 
@@ -30,7 +30,9 @@ const createUser = async ({name, email, password, oauth_provider, oauth_id}) => 
             debug('Email is not valid');
             throw new TypeError('Email is not valid');
         }
-        return await User.create({name, email, password});
+        const user = await User.create({name, email, password});
+        await Folder.create({name: 'root', UserId: user.id});
+        return user;
     }
 };
 module.exports.createUser = createUser;
