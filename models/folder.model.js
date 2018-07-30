@@ -1,5 +1,11 @@
 /**
  * @function
+ * @name Folder#setUser
+ * @param {User} user
+ * @return {Promise}
+ */
+/**
+ * @function
  * @name Folder#getBookmarks
  * @return {Promise<Array<Bookmark>>}
  */
