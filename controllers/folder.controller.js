@@ -9,7 +9,7 @@ const debug = require('debug');
 const lFolders = debug('Folders');
 const lBookmarks = debug('Bookmarks');
 const handleError = require("../services/util.service").handleError;
-const {Folder, sequelize} = require('../models');
+const {Folder} = require('../models');
 
 
 /**
@@ -57,10 +57,7 @@ const create = async function (req, res, next) {
         ParentId = await Folder.findOne({where: {ParentId: null, UserId}}).id;
     } else {
         // Check if the parent folder belongs to the user
-        const belongs = await sequelize.query(
-            'SELECT EXISTS(SELECT 1 FROM ? WHERE id = ? AND UserId = ?)',
-            {replacements: ['Folders', ParentId, UserId]}
-        );
+        const belongs = await req.user.hasFolderWithId(ParentId);
         if (!belongs) {
             const error = new Error('You do not have access to this folder.');
             error.status = 403;
@@ -78,6 +75,7 @@ module.exports.create = create;
 
 const update = async function (req, res, next) {
     try {
+        // TODO: Check if it is the root folder
         const folder = req.folder;
         // Prevent owner change
         delete req.body.UserId;
