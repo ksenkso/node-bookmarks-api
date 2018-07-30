@@ -24,7 +24,9 @@ const create = async function (req, res, next) {
     if (!errors.length) {
         try {
             const user = await authService.createUser({name, email, password});
-            return ReS(res, user, 201);
+            const userInfo = user.getClean();
+            userInfo.token = user.getJWT();
+            return ReS(res, userInfo, 201);
         } catch (e) {
             next(e);
         }
