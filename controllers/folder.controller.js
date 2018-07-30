@@ -58,8 +58,8 @@ const create = async function (req, res, next) {
     } else {
         // Check if the parent folder belongs to the user
         const belongs = await sequelize.query(
-            'SELECT EXISTS(SELECT 1 FROM :table WHERE UserId = :id)',
-            {replacements: ['Folders', UserId]}
+            'SELECT EXISTS(SELECT 1 FROM ? WHERE id = ? AND UserId = ?)',
+            {replacements: ['Folders', ParentId, UserId]}
         );
         if (!belongs) {
             const error = new Error('You do not have access to this folder.');
