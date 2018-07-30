@@ -1,4 +1,3 @@
-// TODO: Refactor `create` route to use image load function
 const {handleError, loadImageForUser} = require("../services/util.service");
 
 const {Bookmark, Folder, Tag} = require('../models');
@@ -25,13 +24,7 @@ const testLoad = async function (req, res, next) {
     }
 };
 module.exports.testLoad = testLoad;
-/**
- *
- * @param req
- * @param res
- * @param next
- * @return {Promise<Model>}
- */
+
 const create = async function (req, res, next) {
     /**
      *
@@ -41,6 +34,16 @@ const create = async function (req, res, next) {
     let bookmarkData = req.body;
     // Prevent UserId change
     delete bookmarkData.UserId;
+    if (!bookmarkData.FolderId) {
+        bookmarkData.FolderId = await user.getRootFolder().id;
+    } else {
+        const hasFolder = await user.hasFolderWithId(bookmarkData.FolderId);
+        if (!hasFolder) {
+            const error = new Error('You do not have access to this folder.');
+            error.status = 403;
+            return handleError(error, next);
+        }
+    }
     let newBookmark, imageInfo;
     try {
         imageInfo = await loadImageForUser(bookmarkData.url, user.id);
