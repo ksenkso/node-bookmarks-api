@@ -25,25 +25,26 @@ module.exports = (sequelize, DataTypes) => {
      * @class Folder
      * @extends Sequelize.Model
      */
-    const Model = sequelize.define('Folder', {
+    const Folder = sequelize.define('Folder', {
         name: DataTypes.STRING,
     });
 
-    Model.associate = function (models) {
-        this.User = this.belongsTo(models.User);
+    Folder.associate = function (models) {
         this.hasMany(models.Bookmark);
         this.belongsTo(models.Folder, {as: 'Parent'});
+        // this.belongsTo(models.User);
+        // this.hasOne(models.User, {as: 'Root'});
     };
     /**
      * @name Folder#getChildFolders
      * @return {Promise<Array<Folder>>}
      */
-    Model.prototype.getChildFolders = function () {
-        return Model.findAll({where: {ParentId: this.id}});
+    Folder.prototype.getChildFolders = function () {
+        return Folder.findAll({where: {ParentId: this.id}});
     };
     Folder.prototype.isRootFolder = function () {
         return this.UserId && !this.ParentId;
     };
 
-    return Model;
+    return Folder;
 };

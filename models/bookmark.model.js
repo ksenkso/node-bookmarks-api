@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
      * @class Bookmark
      * @extends Sequelize.Model
      */
-    const Model = sequelize.define('Bookmark', {
+    const Bookmark = sequelize.define('Bookmark', {
         title: DataTypes.STRING,
         url: DataTypes.STRING,
         img: DataTypes.STRING,
@@ -27,11 +27,11 @@ module.exports = (sequelize, DataTypes) => {
         imageType: DataTypes.STRING
     });
 
-    Model.associate = function (models) {
-        this.User = this.belongsTo(models.User);
+    Bookmark.associate = function (models) {
+        this.belongsTo(models.User);
         this.belongsTo(models.Folder);
         this.belongsToMany(models.Tag, {through: 'BookmarkTag'});
     };
 
-    return Model;
+    return Bookmark;
 };

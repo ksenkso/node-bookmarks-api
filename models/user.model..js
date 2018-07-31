@@ -1,6 +1,6 @@
 /**
  * @function
- * @name User#getRootFolder
+ * @name User#getRoot
  * @return {Promise<Folder>}
  */
 /**
@@ -13,7 +13,7 @@ const debug = require('debug')('Model:User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const CONFIG = require('../config/config');
-const {Folder} = require('../models');
+const {Folder} = require('./index');
 
 
 module.exports = (sequelize, DataTypes) => {
@@ -31,10 +31,12 @@ module.exports = (sequelize, DataTypes) => {
         },
         password: DataTypes.STRING,
         oauth_provider: DataTypes.STRING,
-        oauth_id: DataTypes.STRING
+        oauth_id: DataTypes.STRING,
     });
 
     User.associate = function (models) {
+        // User.hasOne(models.Folder);
+        User.belongsTo(models.Folder, {as: 'Root'});
         User.hasMany(models.Bookmark);
         User.hasMany(models.Tag);
     };

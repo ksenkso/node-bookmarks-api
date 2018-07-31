@@ -5,14 +5,14 @@ module.exports = (sequelize, DataTypes) => {
      * @class Tag
      * @extends Sequelize.Model
      */
-    const Model = sequelize.define('Tag', {
+    const Tag = sequelize.define('Tag', {
         name: DataTypes.STRING,
     });
 
-    Model.associate = function (models) {
+    Tag.associate = function (models) {
         this.User = this.belongsTo(models.User);
         this.belongsToMany(models.Bookmark, {through: 'BookmarkTag'});
     };
 
-    return Model;
+    return Tag;
 };
