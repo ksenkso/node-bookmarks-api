@@ -41,6 +41,9 @@ module.exports = (sequelize, DataTypes) => {
     Model.prototype.getChildFolders = function () {
         return Model.findAll({where: {ParentId: this.id}});
     };
+    Folder.prototype.isRootFolder = function () {
+        return this.UserId && !this.ParentId;
+    };
 
     return Model;
 };
