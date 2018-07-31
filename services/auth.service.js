@@ -18,10 +18,11 @@ const CLIENT_ID = '777688038969-dgf86lie7v6pkq4qr3p5rscd1atfu9cg.apps.googleuser
 const createUser = async ({name, email, password, oauth_provider, oauth_id}) => {
     debug('Creating a new user.');
     // Google Sign In
+    let user;
     if (oauth_id && oauth_provider && !password) {
         debug('It is a Google user!');
         // Should we validate email that comes from the Google API?
-        return await User.create({name, email, oauth_provider, oauth_id});
+        user = await User.create({name, email, oauth_provider, oauth_id});
         // Local Sign In
     } else if (!oauth_id && !oauth_provider && name && password) {
         debug('It is a local user!');
@@ -30,10 +31,11 @@ const createUser = async ({name, email, password, oauth_provider, oauth_id}) => 
             debug('Email is not valid');
             throw new TypeError('Email is not valid');
         }
-        const user = await User.create({name, email, password});
-        await Folder.create({name: 'root', UserId: user.id});
-        return user;
+        user = await User.create({name, email, password});
     }
+    const root = await Folder.create({name: 'root', UserId: user.id});
+    user.setRoot(root);
+    return user;
 };
 module.exports.createUser = createUser;
 

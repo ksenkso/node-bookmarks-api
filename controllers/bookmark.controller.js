@@ -13,7 +13,9 @@ const create = async function (req, res, next) {
     // Prevent UserId change
     delete bookmarkData.UserId;
     if (!bookmarkData.FolderId) {
-        bookmarkData.FolderId = await user.getRootFolder().id;
+        const root = await user.getRoot();
+        console.log(root);
+        bookmarkData.FolderId = root.id;
     } else {
         const hasFolder = await user.hasFolderWithId(bookmarkData.FolderId);
         if (!hasFolder) {
@@ -26,12 +28,12 @@ const create = async function (req, res, next) {
     try {
         const $ = await loadPage(bookmarkData.url);
         imageInfo = await loadImageForUser($, bookmarkData.url, user.id);
-        if (!bookmarkData.name) {
+        if (!bookmarkData.title) {
             title = getTitle($);
             if (!title) {
                 title = extractHostname(bookmarkData.url)
             }
-            bookmarkData.name = title;
+            bookmarkData.title = title;
         }
 
     } catch (e) {
@@ -45,6 +47,7 @@ const create = async function (req, res, next) {
         bookmarkData.img = imageInfo.image;
         bookmarkData.imageType = imageInfo.type;
         bookmarkData.background = imageInfo.background;
+        console.log(bookmarkData);
         newBookmark = await Bookmark.create(bookmarkData);
         const [bookmark] = await Promise.all([
             newBookmark.toJSON(),
