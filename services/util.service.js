@@ -55,15 +55,14 @@ module.exports.handleError = function (error, next) {
 
 /**
  *
- * @param {String} body
+ * @param {String} $
  * @param {Number} userId
  * @param {String} siteUrl
  * @return {Promise<{buffer: Buffer, userId: Number}>}
  */
-function loadImage(body, userId, siteUrl) {
+function getImage($, userId, siteUrl) {
     return new Promise((resolve, reject) => {
         let type = 'OG';
-        const $ = cheerio.load(body);
         // Image types
         const images = [
             /*{
@@ -148,7 +147,7 @@ function loadImage(body, userId, siteUrl) {
     });
 }
 
-module.exports.loadImage = loadImage;
+module.exports.getImage = getImage;
 
 /**
  * @typedef {'OG'|'SCH'|'APL'|'ICO'} ImageType
@@ -262,15 +261,18 @@ module.exports.getImageReversedAverageColor = getImageReversedAverageColor;
 
 /**
  *
+ * @param {CheerioStatic} $
  * @param {String} siteUrl
  * @param {Number} userId
  * @return {Promise<BackgroundInfo>}
  */
-function loadImageForUser(siteUrl, userId) {
-    return new Promise(async (resolve, reject) => {
+function loadImageForUser($, siteUrl, userId) {
+    return getImage(/** @type CheerioStatic */$, userId, siteUrl)
+        .then(saveImage);
+    /*return new Promise(async (resolve, reject) => {
         request(siteUrl, (error, response, body) => {
             if (response.statusCode === 200) {
-                loadImage(body, userId, siteUrl)
+                getImage(body, userId, siteUrl)
                     .then(saveImage)
                     .then(resolve)
                     .catch(reject);
@@ -279,7 +281,102 @@ function loadImageForUser(siteUrl, userId) {
                 reject(error);
             }
         });
-    });
+    });*/
 }
 
 module.exports.loadImageForUser = loadImageForUser;
+
+/**
+ *
+ * @param {CheerioStatic} $
+ * @return {?String}
+ */
+function getTitle($) {
+    const titles = [
+        {
+            selector: 'meta[property="og:title"]',
+            attr: 'content'
+        },
+        {
+            selector: 'title',
+            text: true
+        }
+    ];
+    let title = null;
+    while (!title && titles.length) {
+        const options = titles.shift();
+        if (options.text) {
+            title = $(options.selector).text();
+        }
+        title = $(options.selector).attr(options.attr)
+    }
+    return title;
+}
+
+module.exports.getTitle = getTitle;
+
+/**
+ *
+ * @param siteUrl
+ * @return {Promise<CheerioStatic>}
+ */
+function loadPage(siteUrl) {
+    return new Promise(async (resolve, reject) => {
+        request(siteUrl, (error, response, body) => {
+            if (response.statusCode === 200) {
+                resolve(cheerio.load(body));
+            } else {
+                error.status = response.statusCode;
+                reject(error);
+            }
+        });
+    });
+}
+
+module.exports.loadPage = loadPage;
+
+function getSiteDomain(url) {
+    url = url.replace(/^https?:\/\/w+\d?.?/, '');
+    return url.replace(/\?.*$/, '');
+}
+
+module.exports.getSiteDomain = getSiteDomain;
+
+function extractHostname(url) {
+    let hostname;
+    // find & remove protocol (http, ftp, etc.) and get hostname
+    if (url.indexOf("//") > -1) {
+        hostname = url.split('exp/')[2];
+    }
+    else {
+        hostname = url.split('/')[0];
+    }
+    // find & remove port number
+    hostname = hostname.split(':')[0];
+    // find & remove "?"
+    hostname = hostname.split('?')[0];
+    return hostname;
+}
+
+module.exports.extractHostname = extractHostname;
+
+
+// To address those who want the "root domain," use this function:
+function extractRootDomain(url) {
+    let domain = extractHostname(url),
+        splitArr = domain.split('.'),
+        arrLen = splitArr.length;
+    // extracting the root domain here
+    // if there is a subdomain
+    if (arrLen > 2) {
+        domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
+        // check to see if it's using a Country Code Top Level Domain (ccTLD) (i.e. ".me.uk")
+        if (splitArr[arrLen - 2].length === 2 && splitArr[arrLen - 1].length === 2) {
+            // this is using a ccTLD
+            domain = splitArr[arrLen - 3] + '.' + domain;
+        }
+    }
+    return domain;
+}
+
+module.exports.extractRootDomain = extractRootDomain;

@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
         img: DataTypes.STRING,
         background: DataTypes.STRING,
         imageType: DataTypes.STRING
+        //    TODO: Add a `description` field
     });
 
     Model.associate = function (models) {

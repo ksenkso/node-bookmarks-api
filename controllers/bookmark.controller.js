@@ -1,31 +1,10 @@
-const {handleError, loadImageForUser} = require("../services/util.service");
+const {handleError, loadImageForUser, loadPage, getTitle, extractHostname} = require("../services/util.service");
 
 const {Bookmark, Folder, Tag} = require('../models');
 const {ReS} = require('../services/util.service');
 
-const testLoad = async function (req, res, next) {
-    const url = req.body.url;
-    const id = req.user.id;
-    let image;
-    try {
-        image = await loadImageForUser(url, id);
-        return ReS(res, image);
-    } catch (e) {
-        if (e.status && e.status === 404) {
-            image = {
-                image: 'default.jpg',
-                background: null,
-                type: 'IMG'
-            };
-            return ReS(res, image);
-        } else {
-            handleError(e, next);
-        }
-    }
-};
-module.exports.testLoad = testLoad;
-
 const create = async function (req, res, next) {
+    //TODO: Get the page title for bookmark's default description
     /**
      *
      * @type {User}
@@ -44,9 +23,18 @@ const create = async function (req, res, next) {
             return handleError(error, next);
         }
     }
-    let newBookmark, imageInfo;
+    let newBookmark, imageInfo, title;
     try {
-        imageInfo = await loadImageForUser(bookmarkData.url, user.id);
+        const $ = await loadPage(bookmarkData.url);
+        imageInfo = await loadImageForUser($, bookmarkData.url, user.id);
+        if (!bookmarkData.name) {
+            title = getTitle($);
+            if (!title) {
+                title = extractHostname(bookmarkData.url)
+            }
+            bookmarkData.name = title;
+        }
+
     } catch (e) {
         imageInfo = {
             image: 'default.jpg',
