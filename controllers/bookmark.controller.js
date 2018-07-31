@@ -4,7 +4,6 @@ const {Bookmark, Folder, Tag} = require('../models');
 const {ReS} = require('../services/util.service');
 
 const create = async function (req, res, next) {
-    //TODO: Get the page title for bookmark's default description
     /**
      *
      * @type {User}
