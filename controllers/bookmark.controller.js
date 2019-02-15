@@ -14,7 +14,6 @@ const create = async function (req, res, next) {
     delete bookmarkData.UserId;
     if (!bookmarkData.FolderId) {
         const root = await user.getRoot();
-        console.log(root);
         bookmarkData.FolderId = root.id;
     } else {
         const hasFolder = await user.hasFolderWithId(bookmarkData.FolderId);
@@ -63,7 +62,7 @@ module.exports.create = create;
 const getAll = async function (req, res, next) {
     try {
         let user = req.user;
-        const bookmarks = await user.getBookmarks();
+        const bookmarks = await user.getBookmarks({order: [['updatedAt', 'DESC']]});
         const data = bookmarks.map(b => b.toJSON());
         return ReS(res, {bookmarks: data});
     } catch (e) {
