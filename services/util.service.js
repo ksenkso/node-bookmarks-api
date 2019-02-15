@@ -1,3 +1,5 @@
+const url = require('url');
+const zlib = require('zlib');
 const pe = require('parse-error');
 const ico = require("icojs");
 const cheerio = require("cheerio");
@@ -120,27 +122,40 @@ function getImage($, userId, siteUrl) {
             error.status = 404;
             reject(error);
         } else {
-            type = imageLink.match(/\w+\.ico/) ? 'ICO' : 'SPLASH';
-
-            if (!imageLink.match(/https?/)) {
-                // If the url is relative, append the site url
-                imageLink = (siteUrl.endsWith('/') ? siteUrl.slice(0, -1) : siteUrl) + imageLink;
+            let parsedUrl = url.parse(imageLink);
+            console.log(parsedUrl.pathname);
+            if (!parsedUrl.hostname) {
+                parsedUrl = new url.URL(parsedUrl.path, siteUrl);
             }
-            request(imageLink)
+            type = parsedUrl.pathname.match(/\w+\.ico/) ? 'ICO' : 'SPLASH';
+
+            /*if (parsedUrl.protocol) {
+                // If the url is relative, append the site url
+                imageLink = //(siteUrl.endsWith('/') ? siteUrl.slice(0, -1) : siteUrl) + ;
+            }*/
+            imageLink = parsedUrl.toString();
+            request({url: imageLink, headers: {'Accept-Encoding': 'gzip, deflate'}})
                 .on('response', response => {
+
                     // Create an empty buffer to write to it
                     let buffer = Buffer.alloc(0);
+                    console.log(imageLink);
                     response.on('data', data => {
                         // Add data chunks to buffer storage
                         buffer = Buffer.concat([buffer, data], buffer.length + data.length);
                     });
                     response.on('end', () => {
-                        // Resolve an object with buffer and userId
+                        if (response.headers['content-encoding'] === 'gzip') {
+                            buffer = zlib.unzipSync(buffer);
+                        }
                         resolve({buffer, userId, type});
+
+                        // Resolve an object with buffer and userId
                     })
                 })
                 .on('error', error => {
                     // Reject if request fails
+
                     reject(error);
                 });
         }
@@ -307,8 +322,9 @@ function getTitle($) {
         const options = titles.shift();
         if (options.text) {
             title = $(options.selector).text();
+        } else {
+            title = $(options.selector).attr(options.attr);
         }
-        title = $(options.selector).attr(options.attr)
     }
     return title;
 }
@@ -323,10 +339,10 @@ module.exports.getTitle = getTitle;
 function loadPage(siteUrl) {
     return new Promise(async (resolve, reject) => {
         request(siteUrl, (error, response, body) => {
-            if (response.statusCode === 200) {
+            if (response && response.statusCode === 200) {
                 resolve(cheerio.load(body));
             } else {
-                error.status = response.statusCode;
+                error.status = (response && response.statusCode) || 500;
                 reject(error);
             }
         });
@@ -346,9 +362,8 @@ function extractHostname(url) {
     let hostname;
     // find & remove protocol (http, ftp, etc.) and get hostname
     if (url.indexOf("//") > -1) {
-        hostname = url.split('exp/')[2];
-    }
-    else {
+        hostname = url.split('/')[2];
+    } else {
         hostname = url.split('/')[0];
     }
     // find & remove port number
